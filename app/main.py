@@ -10,7 +10,10 @@ from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from weasyprint import HTML
 
-from app.cms import get_facility_core, FacilityNotFound, CMSUnavailable
+from app.cms import (
+    get_facility_core, get_metrics_comparison, format_metric,
+    FacilityNotFound, CMSUnavailable,
+)
 
 app = FastAPI(title="Medelite Facility Assessment Snapshot")
 templates = Jinja2Templates(directory="app/templates")
@@ -42,13 +45,59 @@ def render_error(request: Request, message: str, status_code: int = 400):
     )
 
 
+# def build_report_data(
+#     ccn, name_override, emr, current_census, patient_type,
+#     previous_coverage, previous_performance, medical_coverage,
+# ):
+#     """Fetch CMS data and merge it with the manual inputs into one dict."""
+#     core = get_facility_core(ccn)  # may raise FacilityNotFound or CMSUnavailable
+#     name = name_override.strip() or core["provider_name"]
+#     return {
+#         **core,
+#         "name": name,
+#         "emr": emr,
+#         "current_census": current_census,
+#         "patient_type": patient_type,
+#         "previous_coverage": previous_coverage,
+#         "previous_performance": previous_performance,
+#         "medical_coverage": medical_coverage,
+#     }
+
+
 def build_report_data(
     ccn, name_override, emr, current_census, patient_type,
     previous_coverage, previous_performance, medical_coverage,
 ):
-    """Fetch CMS data and merge it with the manual inputs into one dict."""
-    core = get_facility_core(ccn)  # may raise FacilityNotFound or CMSUnavailable
+    """Fetch CMS data + metrics, merge with manual inputs into one dict."""
+    core = get_facility_core(ccn)
     name = name_override.strip() or core["provider_name"]
+
+    metrics = get_metrics_comparison(ccn, core["state"])
+    m = {
+        row["key"]: {
+            "facility": format_metric(row["facility"], row["unit"]),
+            "national": format_metric(row["national"], row["unit"]),
+            "state": format_metric(row["state"], row["unit"]),
+        }
+        for row in metrics
+    }
+
+    # 12 metric rows in the exact order + labels of the Medelite template.
+    metrics_rows = [
+        ("Short Term Hospitalization",                  m["str_hospitalization"]["facility"]),
+        ("STR National Avg. for Hospitalization",       m["str_hospitalization"]["national"]),
+        ("STR State National Avg. for Hospitalization", m["str_hospitalization"]["state"]),
+        ("STR ED Visit",                                m["str_ed_visit"]["facility"]),
+        ("STR ED Visits National Avg.",                 m["str_ed_visit"]["national"]),
+        ("STR ED Visits State Avg.",                    m["str_ed_visit"]["state"]),
+        ("LT Hospitalization",                          m["lt_hospitalization"]["facility"]),
+        ("LT National Avg. for Hospitalization",        m["lt_hospitalization"]["national"]),
+        ("LT State National Avg. for Hospitalization",  m["lt_hospitalization"]["state"]),
+        ("ED Visit",                                    m["lt_ed_visit"]["facility"]),
+        ("LT ED Visits National Avg.",                  m["lt_ed_visit"]["national"]),
+        ("LT ED Visits State Avg.",                     m["lt_ed_visit"]["state"]),
+    ]
+
     return {
         **core,
         "name": name,
@@ -58,8 +107,8 @@ def build_report_data(
         "previous_coverage": previous_coverage,
         "previous_performance": previous_performance,
         "medical_coverage": medical_coverage,
+        "metrics_rows": metrics_rows,
     }
-
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
@@ -157,3 +206,15 @@ def facility(ccn: str):
         raise HTTPException(status_code=404, detail=f"No facility found for CCN {ccn}")
     except CMSUnavailable:
         raise HTTPException(status_code=503, detail="CMS data service unavailable")
+
+@app.get("/api/debug/metrics-check/{ccn}")
+def debug_metrics_check(ccn: str):
+    """TEMPORARY: verify all 12 numbers before we render them anywhere."""
+    from app.cms import get_facility_core, get_metrics_comparison, format_metric
+    core = get_facility_core(ccn)
+    rows = get_metrics_comparison(ccn, core["state"])
+    for r in rows:
+        r["facility_fmt"] = format_metric(r["facility"], r["unit"])
+        r["national_fmt"] = format_metric(r["national"], r["unit"])
+        r["state_fmt"] = format_metric(r["state"], r["unit"])
+    return {"state": core["state"], "metrics": rows}

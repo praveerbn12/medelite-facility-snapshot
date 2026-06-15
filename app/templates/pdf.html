@@ -35,6 +35,9 @@
     <tr><th>Health Inspection</th><td>{{ data.ratings.health_inspection or "Not available" }}</td></tr>
     <tr><th>Staffing</th><td>{{ data.ratings.staffing or "Not available" }}</td></tr>
     <tr><th>Quality of Resident Care</th><td>{{ data.ratings.quality_of_care or "Not available" }}</td></tr>
+    {% for label, value in data.metrics_rows %}
+    <tr><th>{{ label }}</th><td>{{ value }}</td></tr>
+    {% endfor %}
   </table>
 
   <div class="footer">

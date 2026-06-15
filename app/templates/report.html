@@ -28,6 +28,9 @@
     {{ row("Health Inspection", data.ratings.health_inspection, "Not available") }}
     {{ row("Staffing", data.ratings.staffing, "Not available") }}
     {{ row("Quality of Resident Care", data.ratings.quality_of_care, "Not available") }}
+    {% for label, value in data.metrics_rows %}
+    {{ row(label, value, "Not available") }}
+    {% endfor %}
   </tbody>
 </table>
 
