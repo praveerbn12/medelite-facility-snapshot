@@ -22,19 +22,19 @@
   <div class="state">{{ data.state }}</div>
 
   <table>
-    <tr><th>Name of Facility</th><td>{{ data.name }}</td></tr>
-    <tr><th>Location</th><td>{{ data.location }}</td></tr>
-    <tr><th>EMR</th><td>{{ data.emr or "—" }}</td></tr>
-    <tr><th>Census Capacity</th><td>{{ data.certified_beds or "—" }}</td></tr>
-    <tr><th>Current Census</th><td>{{ data.current_census or "—" }}</td></tr>
-    <tr><th>Type of Patient</th><td>{{ data.patient_type or "—" }}</td></tr>
-    <tr><th>Previous Coverage from Medelite</th><td>{{ data.previous_coverage or "—" }}</td></tr>
-    <tr><th>Previous Provider Performance from Medelite</th><td>{{ data.previous_performance or "—" }}</td></tr>
-    <tr><th>Medical Coverage</th><td>{{ data.medical_coverage or "—" }}</td></tr>
-    <tr><th>Overall Star Rating</th><td>{{ data.ratings.overall or "—" }}</td></tr>
-    <tr><th>Health Inspection</th><td>{{ data.ratings.health_inspection or "—" }}</td></tr>
-    <tr><th>Staffing</th><td>{{ data.ratings.staffing or "—" }}</td></tr>
-    <tr><th>Quality of Resident Care</th><td>{{ data.ratings.quality_of_care or "—" }}</td></tr>
+    <tr><th>Name of Facility</th><td>{{ data.name or "Not available" }}</td></tr>
+    <tr><th>Location</th><td>{{ data.location or "Not available" }}</td></tr>
+    <tr><th>EMR</th><td>{{ data.emr or "Not provided" }}</td></tr>
+    <tr><th>Census Capacity</th><td>{{ data.certified_beds or "Not available" }}</td></tr>
+    <tr><th>Current Census</th><td>{{ data.current_census or "Not provided" }}</td></tr>
+    <tr><th>Type of Patient</th><td>{{ data.patient_type or "Not provided" }}</td></tr>
+    <tr><th>Previous Coverage from Medelite</th><td>{{ data.previous_coverage or "Not provided" }}</td></tr>
+    <tr><th>Previous Provider Performance from Medelite</th><td>{{ data.previous_performance or "Not provided" }}</td></tr>
+    <tr><th>Medical Coverage</th><td>{{ data.medical_coverage or "Not provided" }}</td></tr>
+    <tr><th>Overall Star Rating</th><td>{{ data.ratings.overall or "Not available" }}</td></tr>
+    <tr><th>Health Inspection</th><td>{{ data.ratings.health_inspection or "Not available" }}</td></tr>
+    <tr><th>Staffing</th><td>{{ data.ratings.staffing or "Not available" }}</td></tr>
+    <tr><th>Quality of Resident Care</th><td>{{ data.ratings.quality_of_care or "Not available" }}</td></tr>
   </table>
 
   <div class="footer">

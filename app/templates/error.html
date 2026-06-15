@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="bg-white p-8 rounded-lg shadow-sm text-center">
+  <h1 class="text-xl font-semibold mb-2 text-slate-800">We couldn't generate that report</h1>
+  <p class="text-slate-600 mb-6">{{ message }}</p>
+  <a href="/"
+     class="inline-block bg-slate-800 text-white rounded px-5 py-2 text-sm font-medium hover:bg-slate-700">
+    ← Back to the form
+  </a>
+</div>
+{% endblock %}
