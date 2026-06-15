@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from weasyprint import HTML
+from app.docx_report import build_docx
 
 from app.cms import (
     get_facility_core, get_metrics_comparison, format_metric,
@@ -285,7 +286,48 @@ def report_pdf(
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
+@app.post("/report/docx")
+def report_docx(
+    request: Request,
+    ccn: str = Form(...),
+    name_override: str = Form(""),
+    emr: str = Form(""),
+    current_census: str = Form(""),
+    patient_type: str = Form(""),
+    previous_coverage: str = Form(""),
+    previous_performance: str = Form(""),
+    medical_coverage: str = Form(""),
+):
+    ccn, error = validate_inputs(ccn, current_census)
+    if error:
+        return render_error(request, error, status_code=400)
 
+    try:
+        data = build_report_data(
+            ccn, name_override, emr, current_census, patient_type,
+            previous_coverage, previous_performance, medical_coverage,
+        )
+    except FacilityNotFound:
+        return render_error(
+            request,
+            f"We couldn't find a facility with CCN {ccn}. Double-check the number and try again.",
+            status_code=404,
+        )
+    except CMSUnavailable:
+        return render_error(
+            request,
+            "We couldn't reach the CMS data service right now. Please try again in a moment.",
+            status_code=503,
+        )
+
+    docx_bytes = build_docx(data)
+    filename = f"facility_snapshot_{data['ccn']}.docx"
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+    
 # Debug JSON endpoint — raw API, so JSON errors are fine here.
 @app.get("/api/facility/{ccn}")
 def facility(ccn: str):

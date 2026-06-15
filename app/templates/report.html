@@ -75,7 +75,7 @@
   Data as of {{ data.processing_date }} ·
   <a href="{{ data.care_compare_url }}" class="underline">View on Medicare Care Compare</a>
 </p>
-
+<!-- 
 <form action="/report/pdf" method="post" class="mt-4">
   <input type="hidden" name="ccn" value="{{ data.ccn }}">
   <input type="hidden" name="name_override" value="{{ data.name }}">
@@ -89,7 +89,36 @@
           class="bg-slate-800 text-white rounded px-4 py-2 text-sm font-medium hover:bg-slate-700">
     Download PDF
   </button>
-</form>
+</form> -->
+
+<div class="mt-4 flex gap-3">
+    <form action="/report/pdf" method="post">
+      <input type="hidden" name="ccn" value="{{ data.ccn }}">
+      <input type="hidden" name="name_override" value="{{ data.name }}">
+      <input type="hidden" name="emr" value="{{ data.emr }}">
+      <input type="hidden" name="current_census" value="{{ data.current_census }}">
+      <input type="hidden" name="patient_type" value="{{ data.patient_type }}">
+      <input type="hidden" name="previous_coverage" value="{{ data.previous_coverage }}">
+      <input type="hidden" name="previous_performance" value="{{ data.previous_performance }}">
+      <input type="hidden" name="medical_coverage" value="{{ data.medical_coverage }}">
+      <button type="submit" class="bg-slate-800 text-white rounded px-4 py-2 text-sm font-medium hover:bg-slate-700">
+        Download PDF
+      </button>
+    </form>
+    <form action="/report/docx" method="post">
+      <input type="hidden" name="ccn" value="{{ data.ccn }}">
+      <input type="hidden" name="name_override" value="{{ data.name }}">
+      <input type="hidden" name="emr" value="{{ data.emr }}">
+      <input type="hidden" name="current_census" value="{{ data.current_census }}">
+      <input type="hidden" name="patient_type" value="{{ data.patient_type }}">
+      <input type="hidden" name="previous_coverage" value="{{ data.previous_coverage }}">
+      <input type="hidden" name="previous_performance" value="{{ data.previous_performance }}">
+      <input type="hidden" name="medical_coverage" value="{{ data.medical_coverage }}">
+      <button type="submit" class="bg-white border border-slate-300 text-slate-700 rounded px-4 py-2 text-sm font-medium hover:bg-slate-50">
+        Download Word
+      </button>
+    </form>
+  </div>
 
 <a href="/" class="inline-block mt-4 text-sm underline">← Look up another facility</a>
 {% endblock %}

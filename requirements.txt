@@ -3,4 +3,5 @@ uvicorn[standard]
 requests
 jinja2
 python-multipart
-weasyprint
+weasyprint==66.0
+python-docx
