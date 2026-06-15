@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Facility Assessment Snapshot{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <div class="max-w-3xl mx-auto p-6">
+
+    <!-- ===== STATIC BRANDING BANNER =====
+         Hardcoded product brand. NEVER replaced by the facility
+         name from CMS or the user's override. -->
+    <header class="text-center mb-6">
+      <div class="text-2xl font-bold tracking-wide">
+        INFINITE <span class="text-slate-400">—</span> Managed by MEDELITE
+      </div>
+    </header>
+
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

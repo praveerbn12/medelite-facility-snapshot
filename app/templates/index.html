@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">Facility Assessment Snapshot</h1>
+
+<form action="/report" method="post" class="space-y-4 bg-white p-6 rounded-lg shadow-sm">
+
+  <div>
+    <label class="block text-sm font-medium mb-1">CCN (CMS Certification Number) *</label>
+    <input name="ccn" required placeholder="686123" class="w-full border rounded px-3 py-2">
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium mb-1">Facility name override (optional)</label>
+    <input name="name_override" placeholder="Leave blank to use the official CMS name"
+           class="w-full border rounded px-3 py-2">
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium mb-1">EMR</label>
+    <input name="emr" placeholder="e.g. PCC" class="w-full border rounded px-3 py-2">
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium mb-1">Current Census</label>
+    <input name="current_census" placeholder="e.g. 112" class="w-full border rounded px-3 py-2">
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium mb-1">Type of Patient</label>
+    <input name="patient_type" placeholder="e.g. Long-term & Short-term"
+           class="w-full border rounded px-3 py-2">
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium mb-1">Previous Coverage from Medelite</label>
+    <select name="previous_coverage" class="w-full border rounded px-3 py-2">
+      <option value="">—</option>
+      <option value="Yes">Yes</option>
+      <option value="No">No</option>
+    </select>
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium mb-1">Previous Provider Performance from Medelite</label>
+    <input name="previous_performance" placeholder="e.g. About 30 patients/day"
+           class="w-full border rounded px-3 py-2">
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium mb-1">Medical Coverage</label>
+    <input name="medical_coverage" placeholder="e.g. Optometry, PCP, Podiatry"
+           class="w-full border rounded px-3 py-2">
+  </div>
+
+  <button type="submit"
+          class="w-full bg-slate-800 text-white rounded py-2 font-medium hover:bg-slate-700">
+    Generate Report
+  </button>
+</form>
+{% endblock %}

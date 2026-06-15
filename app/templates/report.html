@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="text-center mb-4">
+  <div class="text-lg font-semibold">FACILITY ASSESSMENT SNAPSHOT</div>
+  <div class="text-sm text-slate-500">{{ data.state }}</div>
+</div>
+
+{% macro row(label, value) %}
+<tr>
+  <th class="text-left px-4 py-2 bg-slate-100 w-1/2 font-medium">{{ label }}</th>
+  <td class="px-4 py-2">{{ value or "—" }}</td>
+</tr>
+{% endmacro %}
+
+<table class="w-full bg-white rounded-lg shadow-sm overflow-hidden">
+  <tbody class="divide-y">
+    {{ row("Name of Facility", data.name) }}
+    {{ row("Location", data.location) }}
+    {{ row("EMR", data.emr) }}
+    {{ row("Census Capacity", data.certified_beds) }}
+    {{ row("Current Census", data.current_census) }}
+    {{ row("Type of Patient", data.patient_type) }}
+    {{ row("Previous Coverage from Medelite", data.previous_coverage) }}
+    {{ row("Previous Provider Performance from Medelite", data.previous_performance) }}
+    {{ row("Medical Coverage", data.medical_coverage) }}
+    {{ row("Overall Star Rating", data.ratings.overall) }}
+    {{ row("Health Inspection", data.ratings.health_inspection) }}
+    {{ row("Staffing", data.ratings.staffing) }}
+    {{ row("Quality of Resident Care", data.ratings.quality_of_care) }}
+  </tbody>
+</table>
+
+<p class="text-xs text-slate-400 mt-3">
+  Data as of {{ data.processing_date }} ·
+  <a href="{{ data.care_compare_url }}" class="underline">View on Medicare Care Compare</a>
+</p>
+
+<!-- Download PDF: re-posts the same data to the PDF endpoint -->
+<form action="/report/pdf" method="post" class="mt-4">
+  <input type="hidden" name="ccn" value="{{ data.ccn }}">
+  <input type="hidden" name="name_override" value="{{ data.name }}">
+  <input type="hidden" name="emr" value="{{ data.emr }}">
+  <input type="hidden" name="current_census" value="{{ data.current_census }}">
+  <input type="hidden" name="patient_type" value="{{ data.patient_type }}">
+  <input type="hidden" name="previous_coverage" value="{{ data.previous_coverage }}">
+  <input type="hidden" name="previous_performance" value="{{ data.previous_performance }}">
+  <input type="hidden" name="medical_coverage" value="{{ data.medical_coverage }}">
+  <button type="submit"
+          class="bg-slate-800 text-white rounded px-4 py-2 text-sm font-medium hover:bg-slate-700">
+    Download PDF
+  </button>
+</form>
+
+<a href="/" class="inline-block mt-4 text-sm underline">← Look up another facility</a>
+{% endblock %}
