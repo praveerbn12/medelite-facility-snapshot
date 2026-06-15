@@ -13,6 +13,20 @@
 </tr>
 {% endmacro %}
 
+{% macro metric_row(label, value, tone) %}
+<tr>
+  <th class="text-left px-4 py-2 bg-slate-100 w-1/2 font-medium">{{ label }}</th>
+  <td class="px-4 py-2 {% if tone == 'good' %}bg-emerald-50{% elif tone == 'bad' %}bg-rose-50{% endif %}">
+    {{ value }}
+    {% if tone == 'good' %}
+    <span class="ml-2 text-xs font-medium text-emerald-700">▼ below avg</span>
+    {% elif tone == 'bad' %}
+    <span class="ml-2 text-xs font-medium text-rose-700">▲ above avg</span>
+    {% endif %}
+  </td>
+</tr>
+{% endmacro %}
+
 <table class="w-full bg-white rounded-lg shadow-sm overflow-hidden">
   <tbody class="divide-y">
     {{ row("Name of Facility", data.name, "Not available") }}
@@ -28,11 +42,34 @@
     {{ row("Health Inspection", data.ratings.health_inspection, "Not available") }}
     {{ row("Staffing", data.ratings.staffing, "Not available") }}
     {{ row("Quality of Resident Care", data.ratings.quality_of_care, "Not available") }}
-    {% for label, value in data.metrics_rows %}
-    {{ row(label, value, "Not available") }}
+    {% for label, value, tone in data.metrics_rows %}
+    {{ metric_row(label, value, tone) }}
     {% endfor %}
   </tbody>
 </table>
+
+<p class="text-xs text-slate-400 mt-2">
+  <span class="text-emerald-700 font-medium">▼ below avg</span> = better than the national average; lower is better for these measures.
+</p>
+
+<div class="mt-6 bg-white rounded-lg shadow-sm p-5">
+  <div class="text-sm font-semibold text-slate-700 mb-4">Hospitalization &amp; ED Performance vs Benchmarks</div>
+  {% for m in data.metrics_chart %}
+  <div class="mb-4">
+    <div class="text-xs font-medium text-slate-600 mb-1.5">{{ m.label }}</div>
+    {% for bar in m.bars %}
+    <div class="flex items-center gap-2 mb-1">
+      <div class="w-20 shrink-0 text-xs text-slate-500">{{ bar.name }}</div>
+      <div class="flex-1 bg-slate-100 rounded h-4">
+        <div class="h-4 rounded {% if bar.is_facility and m.tone == 'good' %}bg-emerald-500{% elif bar.is_facility and m.tone == 'bad' %}bg-rose-500{% else %}bg-slate-400{% endif %}"
+             style="width: {{ bar.width }}%"></div>
+      </div>
+      <div class="w-12 shrink-0 text-right text-xs text-slate-700">{{ bar.value }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
 
 <p class="text-xs text-slate-400 mt-3">
   Data as of {{ data.processing_date }} ·

@@ -4,7 +4,8 @@ Form (GET /), report (POST /report), PDF download (POST /report/pdf).
 Phase 4a: validation + friendly error pages + CMS-outage handling.
 Required fields: CCN (6 digits) and Current Census (whole number).
 """
-
+import base64
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
@@ -18,6 +19,20 @@ from app.cms import (
 app = FastAPI(title="Medelite Facility Assessment Snapshot")
 templates = Jinja2Templates(directory="app/templates")
 
+# Load the corporate logo once and inline it as a base64 data URI, so it
+# renders identically in the browser and in the WeasyPrint PDF — no dependency
+# on static-file serving or file-path resolution. Falls back to the text
+# banner if the file is missing.
+_LOGO_PATH = Path(__file__).parent / "static" / "medelite-logo.png"
+try:
+    _logo_b64 = base64.b64encode(_LOGO_PATH.read_bytes()).decode("ascii")
+    LOGO_DATA_URI = f"data:image/png;base64,{_logo_b64}"
+except FileNotFoundError:
+    LOGO_DATA_URI = ""
+
+# Make it available to every template (web pages and the PDF).
+templates.env.globals["logo_data_uri"] = LOGO_DATA_URI
+
 
 def validate_inputs(ccn: str, current_census: str):
     """Validate the required/numeric fields.
@@ -27,7 +42,7 @@ def validate_inputs(ccn: str, current_census: str):
     """
     ccn = ccn.strip()
     if not (len(ccn) == 6 and ccn.isdigit()):
-        return ccn, "Please enter a valid 6-digit CCN (digits only) — for example, 686123."
+        return ccn, "Please enter a valid 6-digit CCN (digits only) — for example, 123456."
 
     census = current_census.strip()
     if not census:
@@ -49,9 +64,45 @@ def render_error(request: Request, message: str, status_code: int = 400):
 #     ccn, name_override, emr, current_census, patient_type,
 #     previous_coverage, previous_performance, medical_coverage,
 # ):
-#     """Fetch CMS data and merge it with the manual inputs into one dict."""
-#     core = get_facility_core(ccn)  # may raise FacilityNotFound or CMSUnavailable
+#     """Fetch CMS data + metrics, merge with manual inputs into one dict."""
+#     core = get_facility_core(ccn)
 #     name = name_override.strip() or core["provider_name"]
+
+#     metrics = get_metrics_comparison(ccn, core["state"])
+#     by_key = {row["key"]: row for row in metrics}
+
+#     def fmt(key, which):
+#         m = by_key[key]
+#         return format_metric(m[which], m["unit"])
+
+#     def tone(key):
+#         """Lower is better for all four measures: green if the facility is below
+#         the national average, red if above, neutral if either value is missing."""
+#         fac, nat = by_key[key]["facility"], by_key[key]["national"]
+#         if fac is None or nat is None:
+#             return "neutral"
+#         if fac < nat:
+#             return "good"
+#         if fac > nat:
+#             return "bad"
+#         return "neutral"
+
+#     # 12 rows in the template's order. Facility rows carry a tone; benchmarks stay neutral.
+#     metrics_rows = [
+#         ("Short Term Hospitalization",                  fmt("str_hospitalization", "facility"), tone("str_hospitalization")),
+#         ("STR National Avg. for Hospitalization",       fmt("str_hospitalization", "national"), "neutral"),
+#         ("STR State National Avg. for Hospitalization", fmt("str_hospitalization", "state"),    "neutral"),
+#         ("STR ED Visit",                                fmt("str_ed_visit", "facility"),        tone("str_ed_visit")),
+#         ("STR ED Visits National Avg.",                 fmt("str_ed_visit", "national"),        "neutral"),
+#         ("STR ED Visits State Avg.",                    fmt("str_ed_visit", "state"),           "neutral"),
+#         ("LT Hospitalization",                          fmt("lt_hospitalization", "facility"),  tone("lt_hospitalization")),
+#         ("LT National Avg. for Hospitalization",        fmt("lt_hospitalization", "national"),  "neutral"),
+#         ("LT State National Avg. for Hospitalization",  fmt("lt_hospitalization", "state"),     "neutral"),
+#         ("ED Visit",                                    fmt("lt_ed_visit", "facility"),         tone("lt_ed_visit")),
+#         ("LT ED Visits National Avg.",                  fmt("lt_ed_visit", "national"),         "neutral"),
+#         ("LT ED Visits State Avg.",                     fmt("lt_ed_visit", "state"),            "neutral"),
+#     ]
+
 #     return {
 #         **core,
 #         "name": name,
@@ -61,8 +112,8 @@ def render_error(request: Request, message: str, status_code: int = 400):
 #         "previous_coverage": previous_coverage,
 #         "previous_performance": previous_performance,
 #         "medical_coverage": medical_coverage,
+#         "metrics_rows": metrics_rows,
 #     }
-
 
 def build_report_data(
     ccn, name_override, emr, current_census, patient_type,
@@ -73,30 +124,66 @@ def build_report_data(
     name = name_override.strip() or core["provider_name"]
 
     metrics = get_metrics_comparison(ccn, core["state"])
-    m = {
-        row["key"]: {
-            "facility": format_metric(row["facility"], row["unit"]),
-            "national": format_metric(row["national"], row["unit"]),
-            "state": format_metric(row["state"], row["unit"]),
-        }
-        for row in metrics
-    }
+    by_key = {row["key"]: row for row in metrics}
 
-    # 12 metric rows in the exact order + labels of the Medelite template.
+    def fmt(key, which):
+        m = by_key[key]
+        return format_metric(m[which], m["unit"])
+
+    def tone(key):
+        """Lower is better for all four measures: green if facility is below the
+        national average, red if above, neutral if either value is missing."""
+        fac, nat = by_key[key]["facility"], by_key[key]["national"]
+        if fac is None or nat is None:
+            return "neutral"
+        if fac < nat:
+            return "good"
+        if fac > nat:
+            return "bad"
+        return "neutral"
+
     metrics_rows = [
-        ("Short Term Hospitalization",                  m["str_hospitalization"]["facility"]),
-        ("STR National Avg. for Hospitalization",       m["str_hospitalization"]["national"]),
-        ("STR State National Avg. for Hospitalization", m["str_hospitalization"]["state"]),
-        ("STR ED Visit",                                m["str_ed_visit"]["facility"]),
-        ("STR ED Visits National Avg.",                 m["str_ed_visit"]["national"]),
-        ("STR ED Visits State Avg.",                    m["str_ed_visit"]["state"]),
-        ("LT Hospitalization",                          m["lt_hospitalization"]["facility"]),
-        ("LT National Avg. for Hospitalization",        m["lt_hospitalization"]["national"]),
-        ("LT State National Avg. for Hospitalization",  m["lt_hospitalization"]["state"]),
-        ("ED Visit",                                    m["lt_ed_visit"]["facility"]),
-        ("LT ED Visits National Avg.",                  m["lt_ed_visit"]["national"]),
-        ("LT ED Visits State Avg.",                     m["lt_ed_visit"]["state"]),
+        ("Short Term Hospitalization",                  fmt("str_hospitalization", "facility"), tone("str_hospitalization")),
+        ("STR National Avg. for Hospitalization",       fmt("str_hospitalization", "national"), "neutral"),
+        ("STR State National Avg. for Hospitalization", fmt("str_hospitalization", "state"),    "neutral"),
+        ("STR ED Visit",                                fmt("str_ed_visit", "facility"),        tone("str_ed_visit")),
+        ("STR ED Visits National Avg.",                 fmt("str_ed_visit", "national"),        "neutral"),
+        ("STR ED Visits State Avg.",                    fmt("str_ed_visit", "state"),           "neutral"),
+        ("LT Hospitalization",                          fmt("lt_hospitalization", "facility"),  tone("lt_hospitalization")),
+        ("LT National Avg. for Hospitalization",        fmt("lt_hospitalization", "national"),  "neutral"),
+        ("LT State National Avg. for Hospitalization",  fmt("lt_hospitalization", "state"),     "neutral"),
+        ("ED Visit",                                    fmt("lt_ed_visit", "facility"),         tone("lt_ed_visit")),
+        ("LT ED Visits National Avg.",                  fmt("lt_ed_visit", "national"),         "neutral"),
+        ("LT ED Visits State Avg.",                     fmt("lt_ed_visit", "state"),            "neutral"),
     ]
+
+    # Grouped comparison bars, normalized per measure (units differ across measures).
+    chart_measures = [
+        ("str_hospitalization", "Short-Term Hospitalization"),
+        ("str_ed_visit",        "Short-Term ED Visit"),
+        ("lt_hospitalization",  "Long-Term Hospitalization"),
+        ("lt_ed_visit",         "Long-Term ED Visit"),
+    ]
+    metrics_chart = []
+    for key, label in chart_measures:
+        row = by_key[key]
+        series = [
+            ("Facility", row["facility"], True),
+            ("National", row["national"], False),
+            ("State",    row["state"],    False),
+        ]
+        present = [v for _, v, _ in series if v is not None]
+        vmax = max(present) if present else 0
+        bars = [
+            {
+                "name": nm,
+                "value": format_metric(v, row["unit"]),
+                "width": round(v / vmax * 100, 1) if (v is not None and vmax) else 0,
+                "is_facility": is_fac,
+            }
+            for nm, v, is_fac in series
+        ]
+        metrics_chart.append({"label": label, "tone": tone(key), "bars": bars})
 
     return {
         **core,
@@ -108,7 +195,9 @@ def build_report_data(
         "previous_performance": previous_performance,
         "medical_coverage": medical_coverage,
         "metrics_rows": metrics_rows,
+        "metrics_chart": metrics_chart,
     }
+
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
@@ -207,14 +296,14 @@ def facility(ccn: str):
     except CMSUnavailable:
         raise HTTPException(status_code=503, detail="CMS data service unavailable")
 
-@app.get("/api/debug/metrics-check/{ccn}")
-def debug_metrics_check(ccn: str):
-    """TEMPORARY: verify all 12 numbers before we render them anywhere."""
-    from app.cms import get_facility_core, get_metrics_comparison, format_metric
-    core = get_facility_core(ccn)
-    rows = get_metrics_comparison(ccn, core["state"])
-    for r in rows:
-        r["facility_fmt"] = format_metric(r["facility"], r["unit"])
-        r["national_fmt"] = format_metric(r["national"], r["unit"])
-        r["state_fmt"] = format_metric(r["state"], r["unit"])
-    return {"state": core["state"], "metrics": rows}
+# @app.get("/api/debug/metrics-check/{ccn}")
+# def debug_metrics_check(ccn: str):
+#     """TEMPORARY: verify all 12 numbers before we render them anywhere."""
+#     from app.cms import get_facility_core, get_metrics_comparison, format_metric
+#     core = get_facility_core(ccn)
+#     rows = get_metrics_comparison(ccn, core["state"])
+#     for r in rows:
+#         r["facility_fmt"] = format_metric(r["facility"], r["unit"])
+#         r["national_fmt"] = format_metric(r["national"], r["unit"])
+#         r["state_fmt"] = format_metric(r["state"], r["unit"])
+#     return {"state": core["state"], "metrics": rows}

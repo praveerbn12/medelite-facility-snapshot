@@ -12,12 +12,38 @@
   table { width: 100%; border-collapse: collapse; }
   th, td { border: 1px solid #cbd5e1; padding: 6px 10px; text-align: left; vertical-align: top; }
   th { background: #f1f5f9; width: 45%; font-weight: 600; }
-  .footer { margin-top: 12px; font-size: 10px; color: #64748b; }
+  td.good { background: #f0fdf4; }
+  td.bad  { background: #fef2f2; }
+  .badge { font-size: 9px; font-weight: 600; margin-left: 6px; }
+  .badge.good { color: #15803d; }
+  .badge.bad  { color: #b91c1c; }
+  .legend { margin-top: 8px; font-size: 9px; color: #64748b; }
+  .legend .g { color: #15803d; font-weight: 600; }
+  .footer { margin-top: 10px; font-size: 10px; color: #64748b; }
+
+  .chart-page { page-break-before: always; }
+  .chart-title { font-size: 14px; font-weight: bold; margin: 0 0 12px; }
+  .measure { margin-bottom: 12px; page-break-inside: avoid; }
+  .measure-label { font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+  .bar-row { margin-bottom: 5px; }
+  .bar-name { display: inline-block; width: 80px; font-size: 12px; color: #64748b; vertical-align: middle; }
+  .bar-track { display: inline-block; width: 360px; height: 14px; background: #f1f5f9; border-radius: 2px; vertical-align: middle; font-size: 0; line-height: 0; }
+  .bar-fill { display: inline-block; height: 14px; border-radius: 2px; background: #94a3b8; vertical-align: top; }
+  .bar-fill.good { background: #22c55e; }
+  .bar-fill.bad  { background: #ef4444; }
+  .bar-value { display: inline-block; width: 55px; font-size: 12px; color: #334155; text-align: right; vertical-align: middle; margin-left: 10px; }
+
   a { color: #2563eb; }
 </style>
 </head>
 <body>
+  {% if logo_data_uri %}
+  <div style="text-align: center; margin-bottom: 6px;">
+    <img src="{{ logo_data_uri }}" alt="INFINITE — Managed by MEDELITE" style="height: 46px;">
+  </div>
+  {% else %}
   <div class="banner">INFINITE <span class="dash">—</span> Managed by MEDELITE</div>
+  {% endif %}
   <div class="title">FACILITY ASSESSMENT SNAPSHOT</div>
   <div class="state">{{ data.state }}</div>
 
@@ -35,14 +61,31 @@
     <tr><th>Health Inspection</th><td>{{ data.ratings.health_inspection or "Not available" }}</td></tr>
     <tr><th>Staffing</th><td>{{ data.ratings.staffing or "Not available" }}</td></tr>
     <tr><th>Quality of Resident Care</th><td>{{ data.ratings.quality_of_care or "Not available" }}</td></tr>
-    {% for label, value in data.metrics_rows %}
-    <tr><th>{{ label }}</th><td>{{ value }}</td></tr>
+    {% for label, value, tone in data.metrics_rows %}
+    <tr>
+      <th>{{ label }}</th>
+      <td class="{{ tone }}">{{ value }}{% if tone == 'good' %}<span class="badge good">▼ below avg</span>{% elif tone == 'bad' %}<span class="badge bad">▲ above avg</span>{% endif %}</td>
+    </tr>
     {% endfor %}
   </table>
+
+  <div class="legend"><span class="g">▼ below avg</span> = better than the national average; lower is better for these measures.</div>
 
   <div class="footer">
     Data as of {{ data.processing_date }} ·
     <a href="{{ data.care_compare_url }}">View on Medicare Care Compare</a>
+  </div>
+
+  <div class="chart-page">
+    <div class="chart-title">Hospitalization &amp; ED Performance vs Benchmarks</div>
+    {% for m in data.metrics_chart %}
+    <div class="measure">
+      <div class="measure-label">{{ m.label }}</div>
+      {% for bar in m.bars %}
+      <div class="bar-row"><span class="bar-name">{{ bar.name }}</span><span class="bar-track"><span class="bar-fill {% if bar.is_facility and m.tone == 'good' %}good{% elif bar.is_facility and m.tone == 'bad' %}bad{% endif %}" style="width: {{ bar.width }}%"></span></span><span class="bar-value">{{ bar.value }}</span></div>
+      {% endfor %}
+    </div>
+    {% endfor %}
   </div>
 </body>
 </html>
